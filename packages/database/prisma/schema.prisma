@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Language {
+  ENGLISH
+  INDONESIAN
+}
+
+enum CEFRLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+enum VocabStatus {
+  SEEN
+  LEARNING
+  MASTERED
+  WEAK
+}
+
+enum RelationType {
+  SIMILAR
+  PREREQUISITE
+  ADVANCED
+  SAME_CATEGORY
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  avatar        String?
+  preferredLang Language  @default(ENGLISH)
+  learningGoal  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions     Session[]
+  progress     UserProgress[]
+  achievements UserAchievement[]
+  vocabulary   UserVocabulary[]
+  streak       Streak?
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  icon        String
+  description String
+  color       String
+  order       Int      @default(0)
+
+  topics   Topic[]
+  progress UserProgress[]
+
+  @@map("categories")
+}
+
+model Topic {
+  id           String    @id @default(cuid())
+  categoryId   String
+  title        String
+  slug         String    @unique
+  explanation  String    @db.Text
+  level        CEFRLevel
+  discussionQs String[]
+  createdAt    DateTime  @default(now())
+
+  category      Category          @relation(fields: [categoryId], references: [id])
+  vocabulary    TopicVocabulary[]
+  sessions      Session[]
+  roadmapNodes  RoadmapNode[]
+  relationsFrom TopicRelation[]   @relation("FromTopic")
+  relationsTo   TopicRelation[]   @relation("ToTopic")
+  progress      UserProgress[]
+
+  @@map("topics")
+}
+
+model Vocabulary {
+  id         String   @id @default(cuid())
+  word       String   @unique
+  definition String   @db.Text
+  phonetic   String?
+  synonyms   String[]
+  examples   String[]
+  difficulty Int      @default(2)
+  createdAt  DateTime @default(now())
+
+  topics      TopicVocabulary[]
+  userRecords UserVocabulary[]
+
+  @@map("vocabulary")
+}
+
+model TopicVocabulary {
+  topicId      String
+  vocabularyId String
+  importance   Int    @default(1)
+
+  topic      Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, vocabularyId])
+  @@map("topic_vocabulary")
+}
+
+model TopicRelation {
+  fromTopicId  String
+  toTopicId    String
+  relationType RelationType
+  score        Float        @default(0.5)
+
+  fromTopic Topic @relation("FromTopic", fields: [fromTopicId], references: [id], onDelete: Cascade)
+  toTopic   Topic @relation("ToTopic", fields: [toTopicId], references: [id], onDelete: Cascade)
+
+  @@id([fromTopicId, toTopicId])
+  @@map("topic_relations")
+}
+
+model LearningRoadmap {
+  id          String @id @default(cuid())
+  name        String
+  description String @db.Text
+  goal        String
+  order       Int    @default(0)
+
+  nodes RoadmapNode[]
+
+  @@map("learning_roadmaps")
+}
+
+model RoadmapNode {
+  id          String  @id @default(cuid())
+  roadmapId   String
+  topicId     String
+  order       Int
+  isOptional  Boolean @default(false)
+  unlockAfter String?
+
+  roadmap LearningRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  topic   Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@map("roadmap_nodes")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  topicId    String
+  language   Language
+  duration   Int
+  audioUrl   String
+  transcript String   @db.Text
+  createdAt  DateTime @default(now())
+
+  // Scores (0-100)
+  pronunciationScore Float @default(0)
+  grammarScore       Float @default(0)
+  fluencyScore       Float @default(0)
+  confidenceScore    Float @default(0)
+  vocabularyScore    Float @default(0)
+  overallScore       Float @default(0)
+
+  // Analysis
+  speakingSpeed   Float  @default(0)
+  fillerWords     Json   @default("{}")
+  pauseCount      Int    @default(0)
+  uniqueWordCount Int    @default(0)
+  totalWordCount  Int    @default(0)
+  repetitions     Json   @default("{}")
+
+  // Feedback
+  aiFeedback    String   @db.Text @default("")
+  strengths     String[]
+  improvements  String[]
+
+  vocabularyUsed String[]
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@map("sessions")
+}
+
+model UserProgress {
+  id            String   @id @default(cuid())
+  userId        String
+  topicId       String?
+  categoryId    String?
+  totalSessions Int      @default(0)
+  bestScore     Float    @default(0)
+  avgScore      Float    @default(0)
+  lastPracticed DateTime @default(now())
+  isCompleted   Boolean  @default(false)
+  scoreHistory  Json     @default("[]")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic?    @relation(fields: [topicId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+
+  @@unique([userId, topicId])
+  @@unique([userId, categoryId])
+  @@map("user_progress")
+}
+
+model UserVocabulary {
+  userId       String
+  vocabularyId String
+  status       VocabStatus @default(SEEN)
+  timesUsed    Int         @default(0)
+  timesWeak    Int         @default(0)
+  lastSeen     DateTime    @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, vocabularyId])
+  @@map("user_vocabulary")
+}
+
+model Streak {
+  userId       String   @unique
+  current      Int      @default(0)
+  longest      Int      @default(0)
+  lastActivity DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  slug        String @unique
+  name        String
+  description String
+  icon        String
+  rarity      String @default("common")
+  condition   Json
+
+  users UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@id([userId, achievementId])
+  @@map("user_achievements")
+}

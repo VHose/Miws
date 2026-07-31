@@ -1,0 +1,27 @@
+{
+  "name": "miws",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "db:generate": "pnpm --filter @miws/database generate",
+    "db:migrate": "pnpm --filter @miws/database migrate",
+    "db:seed": "pnpm --filter @miws/database seed",
+    "db:studio": "pnpm --filter @miws/database studio"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.0",
+    "prettier": "^3.3.2",
+    "eslint": "^8.57.0"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

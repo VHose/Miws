@@ -1,0 +1,26 @@
+node_modules
+.next
+dist
+.turbo
+coverage
+.vercel
+*.tsbuildinfo
+*.log
+
+# Local configuration and secrets. Keep only sanitized *.env.example templates.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Private credentials and certificate material
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+firebase-adminsdk*.json
+
+# This workspace uses pnpm; do not add npm's lockfile.
+package-lock.json

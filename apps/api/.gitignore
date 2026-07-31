@@ -1,0 +1,19 @@
+# Environment files and secret material
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+service-account*.json
+firebase-adminsdk*.json
+
+# Build output and package-manager artefacts
+dist/
+node_modules/
+package-lock.json
+npm-debug.log*
+pnpm-debug.log*

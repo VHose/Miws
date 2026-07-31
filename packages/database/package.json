@@ -1,0 +1,24 @@
+{
+  "name": "@miws/database",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma db push",
+    "push": "prisma db push",
+    "migrate:dev": "prisma migrate dev",
+    "seed": "tsx seed/index.ts",
+    "studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.16.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.16.0",
+    "dotenv": "^16.4.5",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.16.0",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.0"
+  }
+}
