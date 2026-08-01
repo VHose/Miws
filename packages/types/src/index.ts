@@ -12,6 +12,8 @@ export type AchievementRarity = 'common' | 'rare' | 'epic' | 'legendary'
 
 export type LearningGoal = 'IELTS' | 'TOEFL' | 'INTERVIEW' | 'DAILY' | 'BUSINESS' | 'TECH' | 'PUBLIC_SPEAKING'
 
+export type SubscriptionTier = 'FREE' | 'PRO' | 'ENTERPRISE'
+
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -21,6 +23,10 @@ export interface User {
   avatar?: string
   preferredLang: Language
   learningGoal?: LearningGoal
+  subscriptionTier: SubscriptionTier
+  subscriptionExpiresAt?: string | null
+  dailySessionCount: number
+  lastSessionResetDate?: string
   createdAt: string
 }
 
@@ -42,6 +48,7 @@ export interface Topic {
   explanation: string
   level: CEFRLevel
   discussionQs: string[]
+  isProOnly?: boolean
   category?: Category
   vocabulary?: TopicVocabulary[]
 }
@@ -247,4 +254,30 @@ export interface SpinTopicRequest {
 
 export interface SpinTopicResponse {
   topic: Topic
+}
+
+export interface SubscriptionStatus {
+  tier: SubscriptionTier
+  isPro: boolean
+  dailyCount: number
+  dailyLimit: number
+  remainingSessions: number
+  expiresAt: string | null
+}
+
+export interface RedeemVoucherRequest {
+  code: string
+}
+
+export interface CheckoutRequest {
+  planId: 'MONTHLY' | 'YEARLY' | 'PASS_7DAYS'
+  paymentMethod?: string
+}
+
+export interface CheckoutResponse {
+  success: boolean
+  invoiceUrl?: string
+  qrisPayload?: string
+  message: string
+  subscription: SubscriptionStatus
 }

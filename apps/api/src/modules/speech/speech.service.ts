@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { GeminiService } from '../../services/gemini.service'
 import { AchievementsService } from '../achievements/achievements.service'
@@ -29,12 +29,50 @@ export class SpeechService {
     audioBuffer: Buffer
     mimeType: string
   }) {
+    // 0. Quota & Subscription Check
+    const user = await this.prisma.user.findUnique({ where: { id: params.userId } })
+    if (!user) throw new BadRequestException('User not found')
+
+    const now = new Date()
+    let currentTier = user.subscriptionTier
+    let expiresAt = user.subscriptionExpiresAt
+
+    if (expiresAt && new Date(expiresAt) < now && currentTier !== 'FREE') {
+      currentTier = 'FREE'
+      await this.prisma.user.update({
+        where: { id: params.userId },
+        data: { subscriptionTier: 'FREE', subscriptionExpiresAt: null },
+      })
+    }
+
+    const lastReset = new Date(user.lastSessionResetDate)
+    const isDifferentDay =
+      lastReset.getUTCFullYear() !== now.getUTCFullYear() ||
+      lastReset.getUTCMonth() !== now.getUTCMonth() ||
+      lastReset.getUTCDate() !== now.getUTCDate()
+
+    const dailyCount = isDifferentDay ? 0 : user.dailySessionCount
+    const isPro = currentTier === 'PRO' || currentTier === 'ENTERPRISE'
+    const dailyLimit = isPro ? 999 : 3
+
+    if (!isPro && dailyCount >= dailyLimit) {
+      throw new ForbiddenException(
+        'Batas harian 3 sesi telah tercapai. Tingkatkan ke Pro untuk latihan tanpa batas!',
+      )
+    }
+
     // 1. Get topic info
     const topic = await this.prisma.topic.findUnique({
       where: { id: params.topicId },
       include: { vocabulary: { include: { vocabulary: true } } },
     })
     if (!topic) throw new BadRequestException('Topic not found')
+
+    if (topic.isProOnly && !isPro) {
+      throw new ForbiddenException(
+        'Topik ini khusus untuk pengguna Pro. Tingkatkan akun Anda untuk mengakses!',
+      )
+    }
 
     // 2. Upload audio to Supabase Storage
     const fileName = `${params.userId}/${params.topicId}-${Date.now()}.webm`
@@ -105,6 +143,15 @@ export class SpeechService {
 
     // 8. Update streak
     await this.updateStreak(params.userId)
+
+    // 8.5 Update daily session count for user
+    await this.prisma.user.update({
+      where: { id: params.userId },
+      data: {
+        dailySessionCount: dailyCount + 1,
+        lastSessionResetDate: now,
+      },
+    })
 
     // 9. Check achievements
     const newAchievements = await this.achievements.checkAndUnlock(params.userId, session)

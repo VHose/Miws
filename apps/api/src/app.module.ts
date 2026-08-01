@@ -8,6 +8,7 @@ import { SpeechModule } from './modules/speech/speech.module'
 import { ProgressModule } from './modules/progress/progress.module'
 import { AchievementsModule } from './modules/achievements/achievements.module'
 import { RoadmapModule } from './modules/roadmap/roadmap.module'
+import { SubscriptionModule } from './modules/subscription/subscription.module'
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RoadmapModule } from './modules/roadmap/roadmap.module'
     ProgressModule,
     AchievementsModule,
     RoadmapModule,
+    SubscriptionModule,
   ],
 })
 export class AppModule {}
